@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: lifedashboard-api
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn -w 1 -k uvicorn.workers.UvicornWorker main:app
+    plan: free
+    region: oregon
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: lifedashboard-db
+          property: connectionString
+      - key: GROQ_API_KEY
+        sync: false
+      - key: SECRET_KEY
+        sync: false
+      - key: CORS_ORIGINS
+        value: ${RENDER_EXTERNAL_URL}
+      - key: LOG_LEVEL
+        value: info
+
+  - type: pserv
+    name: lifedashboard-db
+    ipAllowList: []
+    plan: free
+    region: oregon

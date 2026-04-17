@@ -1462,7 +1462,9 @@
         createParticles();
 
         // ===== STATE =====
-        const API_BASE = '';  // Same origin
+        // Support dynamic API URL for production deployment
+        // Uses window.API_URL if set (via environment), otherwise same-origin or window.location
+        const API_BASE = window.API_URL || '';  // Same origin (development) or configured URL (production)
         let habitsChart = null; // Global reference for the chart instance
 
         const navTabs = document.querySelectorAll('.nav-tab');
