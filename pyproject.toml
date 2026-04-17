@@ -1,0 +1,30 @@
+[package]
+name = "life-dashboard"
+version = "1.0.0"
+description = "A habit tracking system that doesn't just store data — it explains it."
+authors = ["Your Name <you@example.com>"]
+python = "^3.10"
+
+[dependencies]
+fastapi = "0.115.0"
+uvicorn = {version = "0.30.0", extras = ["standard"]}
+sqlalchemy = "2.0.35"
+pandas = "2.2.3"
+scipy = "1.14.1"
+groq = "1.1.2"
+pydantic = {version = "2.9.0", extras = ["email"]}
+python-dotenv = "1.0.1"
+python-jose = {version = "3.3.0", extras = ["cryptography"]}
+passlib = {version = "1.7.4", extras = ["bcrypt"]}
+python-multipart = "0.0.9"
+slowapi = "0.1.9"
+psycopg2-binary = "2.9.9"  # For PostgreSQL support in production
+
+[dev-dependencies]
+pytest = "^7.0"
+black = "^23.0"
+flake8 = "^6.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

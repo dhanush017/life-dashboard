@@ -1,0 +1,2326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Life Dashboard — A habit tracking system that doesn't just store data, it explains it.">
+    <meta name="theme-color" content="#0a0a0f">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Life Dashboard — Track. Analyze. Understand.</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75'>📊</text></svg>">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- DNS prefetch for external APIs -->
+    <link rel="dns-prefetch" href="https://console.groq.com">
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+    <style>
+        /* ============================================
+           DESIGN SYSTEM — CSS Variables
+           ============================================ */
+        :root {
+            --bg-primary: #0a0a0f;
+            --bg-secondary: #12121a;
+            --bg-card: rgba(255, 255, 255, 0.04);
+            --bg-card-hover: rgba(255, 255, 255, 0.07);
+            --bg-glass: rgba(255, 255, 255, 0.06);
+            --border-glass: rgba(255, 255, 255, 0.08);
+            --border-glow: rgba(139, 92, 246, 0.3);
+
+            --text-primary: #f0f0f5;
+            --text-secondary: #9a9ab0;
+            --text-muted: #5a5a72;
+
+            --accent-violet: #8b5cf6;
+            --accent-violet-dim: rgba(139, 92, 246, 0.15);
+            --accent-blue: #3b82f6;
+            --accent-cyan: #06b6d4;
+            --accent-emerald: #10b981;
+            --accent-amber: #f59e0b;
+            --accent-rose: #f43f5e;
+
+            --gradient-hero: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 50%, #06b6d4 100%);
+            --gradient-card: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(59, 130, 246, 0.05));
+            --gradient-insight: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(6, 182, 212, 0.08));
+
+            --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 8px 32px rgba(0, 0, 0, 0.4);
+            --shadow-glow: 0 0 40px rgba(139, 92, 246, 0.15);
+
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 24px;
+
+            --transition-fast: 0.12s cubic-bezier(0.4, 0, 0.2, 1);
+            --transition-base: 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+            --transition-slow: 0.42s cubic-bezier(0.16, 1, 0.3, 1);
+
+            --float-slow: 6.2s ease-in-out infinite;
+            --float-base: 4.1s ease-in-out infinite;
+            --float-fast: 2.3s ease-in-out infinite;
+        }
+
+        /* ============================================
+           RESET & BASE
+           ============================================ */
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #0a0a0f 0%, #12121a 100%);
+            color: var(--text-primary);
+            line-height: 1.5;
+            min-height: 100vh;
+            overflow-x: hidden;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* Background orbs disabled for performance (blur filter + animation = constant GPU load) */
+        body::before,
+        body::after {
+            content: '';
+            position: fixed;
+            border-radius: 50%;
+            opacity: 0;
+            z-index: -1;
+            pointer-events: none;
+            display: none;
+        }
+        body::before {
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(139, 92, 246, 0.15), transparent);
+            top: -180px;
+            right: -80px;
+        }
+        body::after {
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(6, 182, 212, 0.1), transparent);
+            bottom: -120px;
+            left: -80px;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(20px, 15px); }
+        }
+
+        /* Page load animation */
+        .page-content {
+            animation: pageReveal 0.4s ease-out;
+        }
+
+        @keyframes pageReveal {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Floating particles disabled for performance (15s animations on 5 elements = GPU waste) */
+        .particle {
+            position: fixed;
+            width: 2px;
+            height: 2px;
+            background: var(--accent-violet);
+            border-radius: 50%;
+            opacity: 0;
+            pointer-events: none;
+            z-index: -1;
+            display: none;
+        }
+
+        @keyframes particleFloat {
+            0% { transform: translateY(100vh); opacity: 0; }
+            10% { opacity: 0.15; }
+            90% { opacity: 0.15; }
+            100% { transform: translateY(-100vh); opacity: 0; }
+        }
+
+        /* ============================================
+           LAYOUT
+           ============================================ */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+/* ============================================
+            HEADER
+            ============================================ */
+        .header {
+            padding: 42px 0 28px;
+            text-align: center;
+            position: relative;
+        }
+
+        .header__badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 7px 19px;
+            background: rgba(139, 92, 246, 0.12);
+            border: 1.5px solid rgba(139, 92, 246, 0.25);
+            border-radius: 100px;
+            font-size: 10.5px;
+            font-weight: 600;
+            color: var(--accent-violet);
+            letter-spacing: 0.85px;
+            text-transform: uppercase;
+            margin-bottom: 26px;
+            transition: all var(--transition-fast), background 0.2s ease;
+        }
+
+        .header__badge:hover {
+            background: rgba(139, 92, 246, 0.18);
+            border-color: rgba(139, 92, 246, 0.35);
+        }
+
+        .header__title {
+            font-size: clamp(2.15rem, 5.2vw, 3.55rem);
+            font-weight: 800;
+            background: var(--gradient-hero);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.12;
+            margin-bottom: 18px;
+            letter-spacing: -0.95px;
+        }
+
+        .header__subtitle {
+            font-size: 1.07rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+            max-width: 540px;
+            margin: 0 auto;
+            line-height: 1.58;
+            letter-spacing: 0.18px;
+        }
+
+        /* NAV TABS
+           ============================================ */
+        .nav-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 5px;
+            margin: 38px auto 34px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-lg);
+            padding: 7px;
+            max-width: 530px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .nav-tab {
+            flex: 1;
+            padding: 11px 23px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-family: inherit;
+            font-size: 13.5px;
+            font-weight: 500;
+            letter-spacing: 0.15px;
+            cursor: pointer;
+            border-radius: var(--radius-md);
+            transition: color var(--transition-fast), background 0.22s ease, transform var(--transition-fast);
+        }
+
+        .nav-tab:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.065);
+            transform: translateY(-1.5px);
+        }
+
+        .nav-tab.active {
+            background: var(--accent-violet);
+            color: white;
+        }
+
+/* ============================================
+            SECTIONS
+            ============================================ */
+        .section {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .section__title {
+            font-size: 1.375rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            line-height: 1.3;
+            letter-spacing: -0.5px;
+        }
+
+        .section__desc {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            margin-bottom: 24px;
+            line-height: 1.5;
+            letter-spacing: 0.2px;
+        }
+
+/* ============================================
+            GLASS CARD
+            ============================================ */
+        .glass-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-lg);
+            padding: 33px 32px 31px 33px;
+            transition: transform var(--transition-base), background 0.23s ease;
+            position: relative;
+            overflow: hidden;
+            animation: cardReveal 0.42s ease-out backwards;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .glass-card:hover {
+            transform: translateY(-3.5px);
+            background: rgba(255, 255, 255, 0.052);
+            filter: drop-shadow(0 13px 42px rgba(139, 92, 246, 0.13));
+        }
+
+        @keyframes cardReveal {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ============================================
+           FORM — Add Data
+           ============================================ */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .form-group {
+            position: relative;
+        }
+
+        .form-group label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.7px;
+        }
+
+        .form-group label .icon {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 13px 17px;
+            background: rgba(255, 255, 255, 0.028);
+            border: 1.5px solid var(--border-glass);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 15px;
+            line-height: 1.42;
+            transition: border-color var(--transition-fast), background 0.2s ease, box-shadow 0.24s ease;
+            outline: none;
+        }
+
+        .form-group input:focus {
+            border-color: var(--accent-violet);
+            background: rgba(255, 255, 255, 0.048);
+            box-shadow: 0 0 0 3.2px var(--accent-violet-dim), inset 0 1px 2.5px rgba(0, 0, 0, 0.12);
+        }
+
+        .form-group input::placeholder {
+            color: var(--text-muted);
+            opacity: 0.7;
+        }
+
+        /* Mood slider */
+        .mood-slider-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .mood-slider {
+            flex: 1;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 6.5px;
+            background: linear-gradient(90deg, rgba(255, 255, 255, 0.085), rgba(255, 255, 255, 0.035));
+            border-radius: 100px;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .mood-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            background: var(--accent-violet);
+            cursor: pointer;
+            box-shadow: 0 2.5px 13px rgba(139, 92, 246, 0.42), inset 0 -1px 2.5px rgba(0, 0, 0, 0.22);
+            transition: transform 0.13s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.15s ease;
+            border: 2px solid rgba(255, 255, 255, 0.12);
+        }
+
+        .mood-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.28);
+            box-shadow: 0 4.5px 22px rgba(139, 92, 246, 0.52), inset 0 -1px 2.5px rgba(0, 0, 0, 0.22);
+        }
+
+        .mood-slider::-webkit-slider-thumb:active {
+            transform: scale(1.12);
+        }
+
+        .mood-value {
+            font-size: 1.625rem;
+            font-weight: 700;
+            color: var(--accent-violet);
+            min-width: 40px;
+            text-align: center;
+            line-height: 1;
+        }
+
+        /* Submit button */
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 14px 37px;
+            background: var(--gradient-hero);
+            color: white;
+            border: none;
+            border-radius: var(--radius-md);
+            font-family: inherit;
+            font-size: 14.5px;
+            font-weight: 600;
+            letter-spacing: 0.28px;
+            cursor: pointer;
+            transition: transform 0.14s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.22s ease, opacity 0.18s ease;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 17px rgba(139, 92, 246, 0.27);
+        }
+
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255, 255, 255, 0.1), transparent);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3.2px);
+            box-shadow: 0 9px 34px rgba(139, 92, 246, 0.38);
+        }
+
+        .btn-primary:hover::before {
+            opacity: 1;
+        }
+
+        .btn-primary:active {
+            transform: translateY(-0.8px);
+            box-shadow: 0 2.5px 13px rgba(139, 92, 246, 0.28);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-primary.loading {
+            opacity: 0.8;
+            pointer-events: none;
+        }
+
+        /* ============================================
+           TOAST NOTIFICATIONS
+           ============================================ */
+        .toast-container {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .toast {
+            padding: 15px 23px 15px 22px;
+            border-radius: var(--radius-md);
+            font-size: 13.8px;
+            font-weight: 500;
+            line-height: 1.42;
+            letter-spacing: 0.12px;
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-glass);
+            animation: slideIn 0.32s cubic-bezier(0.34, 1.56, 0.64, 1), fadeOut 0.32s ease 2.68s forwards;
+            max-width: 385px;
+            box-shadow: 0 9px 26px rgba(0, 0, 0, 0.32);
+        }
+
+        .toast.success {
+            background: rgba(16, 185, 129, 0.12);
+            color: var(--accent-emerald);
+            border-color: rgba(16, 185, 129, 0.25);
+        }
+
+        .toast.error {
+            background: rgba(244, 63, 94, 0.12);
+            color: var(--accent-rose);
+            border-color: rgba(244, 63, 94, 0.25);
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(30px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes fadeOut {
+            to { opacity: 0; transform: translateX(30px); }
+        }
+
+        /* ============================================
+           DATA TABLE — History
+           ============================================ */
+        .data-grid {
+            display: grid;
+            gap: 12px;
+        }
+
+        .data-row {
+            display: grid;
+            grid-template-columns: 1.2fr repeat(3, 1fr) 0.8fr;
+            gap: 16px;
+            padding: 16px 21px 16px 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-md);
+            align-items: center;
+            transition: background 0.22s ease, transform 0.13s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .data-row:hover {
+            background: var(--bg-card-hover);
+            transform: translateX(2.3px);
+        }
+
+        .data-row__header {
+            background: transparent;
+            border: none;
+            padding: 10px 20px;
+        }
+
+        .data-row__header span {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+        }
+
+        .data-row .date {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .data-row .metric {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .data-row .metric strong {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .mood-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .mood-badge.high { background: rgba(16, 185, 129, 0.15); color: var(--accent-emerald); }
+        .mood-badge.mid { background: rgba(245, 158, 11, 0.15); color: var(--accent-amber); }
+        .mood-badge.low { background: rgba(244, 63, 94, 0.15); color: var(--accent-rose); }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: var(--text-muted);
+        }
+
+        .empty-state__icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .empty-state__text {
+            font-size: 15px;
+        }
+
+        /* ============================================
+           HISTORY SECTION — DATA VISUALIZATIONS
+           ============================================ */
+        .quick-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .quick-stat {
+            background: var(--bg-glass);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-md);
+            padding: 16px 12px;
+            text-align: center;
+            transition: all var(--transition-fast);
+        }
+
+        .quick-stat:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--border-glow);
+            transform: translateY(-1px);
+        }
+
+        .quick-stat-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
+
+        .quick-stat-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            background: var(--gradient-hero);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Mini Charts Container */
+        .mini-charts-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .mini-chart-card {
+            background: var(--bg-glass);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            transition: all var(--transition-fast);
+        }
+
+        .mini-chart-card:hover {
+            background: var(--bg-card-hover);
+            border-color: var(--border-glow);
+        }
+
+        .mini-chart-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+        }
+
+        .mini-chart-wrapper {
+            position: relative;
+            height: 200px;
+        }
+
+        @media (max-width: 768px) {
+            .mini-charts-row {
+                grid-template-columns: 1fr;
+            }
+
+            .quick-stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* ============================================
+           INSIGHTS SECTION
+           ============================================ */
+        .insights-trigger {
+            text-align: center;
+            margin-bottom: 36px;
+        }
+
+        .btn-analyze {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 16px 41px;
+            background: var(--gradient-hero);
+            color: white;
+            border: none;
+            border-radius: var(--radius-xl);
+            font-family: inherit;
+            font-size: 15.5px;
+            font-weight: 700;
+            letter-spacing: 0.25px;
+            cursor: pointer;
+            transition: transform 0.13s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.24s ease;
+            position: relative;
+        }
+
+        .btn-analyze:hover {
+            transform: translateY(-2.5px);
+            box-shadow: 0 9px 32px rgba(139, 92, 246, 0.42);
+        }
+
+        .btn-analyze:disabled {
+            opacity: 0.6;
+            cursor: wait;
+        }
+
+        .btn-analyze .spinner {
+            display: none;
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+
+        .btn-analyze.loading .spinner {
+            display: block;
+        }
+
+        .btn-analyze.loading .btn-text {
+            display: none;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Stats grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+
+        .stat-card {
+            background: var(--gradient-card);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-md);
+            padding: 21px 20px 19px 21px;
+            text-align: center;
+            transition: transform var(--transition-base);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-3.3px);
+        }
+
+        .stat-card__icon {
+            font-size: 28px;
+            margin-bottom: 8px;
+        }
+
+        .stat-card__value {
+            font-size: 1.8rem;
+            font-weight: 800;
+            background: var(--gradient-hero);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-card__label {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 8px;
+        }
+
+        /* Sparkline Chart (mini trend chart inside stat cards) */
+        .stat-card__sparkline {
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            gap: 3px;
+            height: 24px;
+            margin-top: 12px;
+        }
+
+        .sparkline-bar {
+            width: 4px;
+            border-radius: 2px;
+            transition: opacity 0.2s ease, height 0.3s ease;
+            opacity: 0.6;
+        }
+
+        .sparkline-bar:hover {
+            opacity: 1;
+        }
+
+        /* Correlations */
+        .correlations {
+            margin-bottom: 28px;
+        }
+
+        .correlation-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 20px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-sm);
+            margin-bottom: 8px;
+        }
+
+        .correlation-row__label {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .correlation-row__value {
+            font-weight: 700;
+            font-size: 15px;
+        }
+
+        .corr-positive { color: var(--accent-emerald); }
+        .corr-negative { color: var(--accent-rose); }
+        .corr-neutral { color: var(--text-muted); }
+
+        /* Correlation bar */
+        .corr-bar-wrapper {
+            width: 120px;
+            height: 6px;
+            background: rgba(255,255,255,0.06);
+            border-radius: 100px;
+            margin: 0 16px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .corr-bar {
+            height: 100%;
+            border-radius: 100px;
+            transition: width 0.6s ease;
+        }
+
+        /* AI Insights */
+        .insights-card {
+            background: var(--gradient-insight);
+            border: 1px solid rgba(16, 185, 129, 0.15);
+            border-radius: var(--radius-lg);
+            padding: 28px;
+        }
+
+        .insights-card__header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .insights-card__header h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .insights-card__header .ai-badge {
+            padding: 3px 10px;
+            background: rgba(139, 92, 246, 0.2);
+            color: var(--accent-violet);
+            border-radius: 100px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .insight-item {
+            padding: 14px 17px 14px 16px;
+            background: rgba(255, 255, 255, 0.028);
+            border-radius: var(--radius-sm);
+            margin-bottom: 11px;
+            font-size: 14.5px;
+            line-height: 1.62;
+            color: var(--text-primary);
+            border-left: 3px solid var(--accent-violet);
+            transition: background 0.18s ease, transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .insight-item:hover {
+            background: rgba(255, 255, 255, 0.062);
+            transform: translateX(2.2px);
+        }
+
+        /* Best/Worst day */
+        .day-cards {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+
+        .day-card {
+            padding: 21px 20px 19px 20px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-glass);
+            text-align: center;
+            transition: transform 0.14s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.24s ease;
+        }
+
+        .day-card.best {
+            background: rgba(16, 185, 129, 0.06);
+            border-color: rgba(16, 185, 129, 0.15);
+        }
+
+        .day-card.worst {
+            background: rgba(244, 63, 94, 0.06);
+            border-color: rgba(244, 63, 94, 0.15);
+        }
+
+        .day-card:hover {
+            transform: scale(1.02);
+        }
+
+        .day-card.best:hover {
+            box-shadow: 0 4px 20px rgba(16, 185, 129, 0.15);
+        }
+
+        .day-card.worst:hover {
+            box-shadow: 0 4px 20px rgba(244, 63, 94, 0.15);
+        }
+
+        .day-card__emoji {
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+
+        .day-card__label {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .day-card__date {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-top: 4px;
+        }
+
+        .day-card__mood {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        /* Mood trend */
+        .trend-banner {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 16px;
+            border-radius: var(--radius-md);
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            margin-bottom: 28px;
+            font-weight: 600;
+        }
+
+        .trend-banner.improving { color: var(--accent-emerald); border-color: rgba(16,185,129, 0.2); }
+        .trend-banner.declining { color: var(--accent-rose); border-color: rgba(244,63,94, 0.2); }
+        .trend-banner.stable { color: var(--accent-amber); border-color: rgba(245,158,11, 0.2); }
+
+        /* Correlations */
+        .correlations {
+            margin-bottom: 28px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-glass);
+        }
+
+        .correlation-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .correlation-row:last-child {
+            border-bottom: none;
+        }
+
+        .correlation-label {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .correlation-value {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .insights-message {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+            font-size: 15px;
+        }
+
+        /* ============================================
+           FOOTER
+           ============================================ */
+        .footer {
+            text-align: center;
+            padding: 48px 0 32px;
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+
+        /* ============================================
+            AUTHENTICATION
+            ============================================ */
+        .auth-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 10, 15, 0.95);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .auth-container {
+            background: var(--bg-card);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-lg);
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(30px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .auth-tabs {
+            display: flex;
+            margin-bottom: 30px;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-md);
+            padding: 4px;
+        }
+
+        .auth-tab {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            border-radius: var(--radius-sm);
+            transition: all var(--transition-base);
+        }
+
+        .auth-tab.active {
+            background: var(--accent-violet);
+            color: white;
+        }
+
+        .auth-form {
+            display: none;
+        }
+
+        .auth-form.active {
+            display: block;
+            animation: formFadeIn 0.3s ease;
+        }
+
+        @keyframes formFadeIn {
+            from { opacity: 0; transform: translateX(10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .auth-form h3 {
+            text-align: center;
+            margin-bottom: 24px;
+            color: var(--text-primary);
+        }
+
+        .auth-form .form-group {
+            margin-bottom: 16px;
+        }
+
+        .auth-form input {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-glass);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-family: inherit;
+            font-size: 15px;
+            transition: all var(--transition-fast);
+            outline: none;
+        }
+
+        .auth-form input:focus {
+            border-color: var(--accent-violet);
+            box-shadow: 0 0 0 3px var(--accent-violet-dim);
+        }
+
+        .auth-error {
+            color: var(--accent-rose);
+            font-size: 14px;
+            margin-top: 12px;
+            text-align: center;
+        }
+
+        .user-info {
+            position: absolute;
+            top: 32px;
+            right: 0;
+            display: none;
+            align-items: center;
+            gap: 16px;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .btn-secondary {
+            padding: 10px 19px;
+            background: rgba(255, 255, 255, 0.035);
+            border: 1.5px solid var(--border-glass);
+            border-radius: var(--radius-md);
+            color: var(--text-secondary);
+            font-family: inherit;
+            font-size: 13.5px;
+            font-weight: 500;
+            letter-spacing: 0.15px;
+            cursor: pointer;
+            transition: border-color 0.16s ease, color var(--transition-fast), background 0.2s ease, transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--accent-violet);
+            color: var(--text-primary);
+            background: rgba(139, 92, 246, 0.085);
+            transform: translateY(-1.2px);
+        }
+
+        .btn-secondary:active {
+            transform: translateY(0);
+        }
+
+        /* ============================================
+            RESPONSIVE
+            ============================================ */
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .data-row {
+                grid-template-columns: 1fr 1fr;
+                gap: 10px;
+            }
+
+            .data-row__header {
+                display: none;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .day-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .nav-tabs {
+                max-width: 100%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 0 16px;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Toast Container for Notifications -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <div class="container page-content">
+
+        <!-- ===== AUTHENTICATION OVERLAY ===== -->
+        <div id="authOverlay" class="auth-overlay">
+            <div class="auth-container">
+                <div class="auth-tabs">
+                    <button class="auth-tab active" data-auth="login" id="loginTab">Login</button>
+                    <button class="auth-tab" data-auth="register" id="registerTab">Register</button>
+                </div>
+
+                <!-- Login Form -->
+                <form id="loginForm" class="auth-form active">
+                    <h3>Welcome Back</h3>
+                    <div class="form-group">
+                        <input type="text" id="loginUsername" placeholder="Username" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="password" id="loginPassword" placeholder="Password" maxlength="128" required>
+                    </div>
+                    <button type="submit" class="btn-primary">Login</button>
+                    <div id="loginError" class="auth-error"></div>
+                </form>
+
+                <!-- Register Form -->
+                <form id="registerForm" class="auth-form">
+                    <h3>Create Account</h3>
+                    <div class="form-group">
+                        <input type="text" id="registerUsername" placeholder="Username" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="email" id="registerEmail" placeholder="Email" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="password" id="registerPassword" placeholder="Password" maxlength="128" required>
+                    </div>
+                    <button type="submit" class="btn-primary">Register</button>
+                    <div id="registerError" class="auth-error"></div>
+                </form>
+            </div>
+        </div>
+
+        <!-- ===== HEADER ===== -->
+        <header class="header">
+            <div class="header__badge">🧠 Data-Driven Self Awareness</div>
+            <h1 class="header__title">Life Dashboard</h1>
+            <p class="header__subtitle">Track your habits. Discover hidden patterns. Let AI explain your life data.</p>
+            <div class="user-info">
+                <span id="userDisplay"></span>
+                <button id="logoutBtn" class="btn-secondary">Logout</button>
+            </div>
+        </header>
+
+        <!-- ===== NAVIGATION TABS ===== -->
+        <nav class="nav-tabs" id="navTabs">
+            <button class="nav-tab active" data-tab="add" id="tabAdd">➕ Log Day</button>
+            <button class="nav-tab" data-tab="history" id="tabHistory">📊 History</button>
+            <button class="nav-tab" data-tab="insights" id="tabInsights">🧠 Insights</button>
+        </nav>
+
+        <!-- ===== SECTION: ADD DATA ===== -->
+        <section class="section active" id="sectionAdd">
+            <div class="glass-card">
+                <h2 class="section__title">Log Today's Data</h2>
+                <p class="section__desc">Record your daily metrics. The more consistent you are, the better the insights.</p>
+
+                <form id="addDataForm">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label><span class="icon">📚</span> Study Hours</label>
+                            <input type="number" id="inputStudy" name="study_hours"
+                                   placeholder="e.g. 4.5" step="0.5" min="0" max="24" required>
+                        </div>
+                        <div class="form-group">
+                            <label><span class="icon">😴</span> Sleep Hours</label>
+                            <input type="number" id="inputSleep" name="sleep_hours"
+                                   placeholder="e.g. 7.0" step="0.5" min="0" max="24" required>
+                        </div>
+                        <div class="form-group">
+                            <label><span class="icon">📱</span> Screen Time</label>
+                            <input type="number" id="inputScreen" name="screen_time"
+                                   placeholder="e.g. 3.0" step="0.5" min="0" max="24" required>
+                        </div>
+                        <div class="form-group">
+                            <label><span class="icon">📅</span> Date</label>
+                            <input type="date" id="inputDate" name="date" required>
+                        </div>
+                    </div>
+
+                    <!-- Mood Slider -->
+                    <div class="form-group" style="margin-bottom: 28px;">
+                        <label><span class="icon">🎭</span> Mood</label>
+                        <div class="mood-slider-wrapper">
+                            <span style="font-size: 20px;">😞</span>
+                            <input type="range" id="inputMood" name="mood"
+                                   class="mood-slider" min="1" max="10" value="5">
+                            <span style="font-size: 20px;">😄</span>
+                            <div class="mood-value" id="moodDisplay">5</div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-primary" id="btnSubmit">
+                        <span>💾</span> Save Entry
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- ===== SECTION: HISTORY ===== -->
+        <section class="section" id="sectionHistory">
+            <h2 class="section__title">Your History</h2>
+            <p class="section__desc">All your tracked days at a glance.</p>
+
+            <!-- ===== QUICK STATS GRID ===== -->
+            <div id="quickStatsContainer" style="display: none;">
+                <div class="quick-stats-grid">
+                    <div class="quick-stat">
+                        <div class="quick-stat-label">Avg Study</div>
+                        <div class="quick-stat-value" id="avgStudyValue">0h</div>
+                    </div>
+                    <div class="quick-stat">
+                        <div class="quick-stat-label">Avg Sleep</div>
+                        <div class="quick-stat-value" id="avgSleepValue">0h</div>
+                    </div>
+                    <div class="quick-stat">
+                        <div class="quick-stat-label">Avg Screen</div>
+                        <div class="quick-stat-value" id="avgScreenValue">0h</div>
+                    </div>
+                    <div class="quick-stat">
+                        <div class="quick-stat-label">Avg Mood</div>
+                        <div class="quick-stat-value" id="avgMoodValue">0/10</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== MINI CHARTS ===== -->
+            <div id="miniChartsContainer" style="display: none; margin-bottom: 28px;">
+                <div class="mini-charts-row">
+                    <!-- 7-Day Bar Chart -->
+                    <div class="mini-chart-card">
+                        <h4 class="mini-chart-title">📊 Last 7 Days</h4>
+                        <div class="mini-chart-wrapper">
+                            <canvas id="barChart7Days"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Mood Trend Line Chart -->
+                    <div class="mini-chart-card">
+                        <h4 class="mini-chart-title">😄 Mood Trend</h4>
+                        <div class="mini-chart-wrapper">
+                            <canvas id="moodTrendChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 12px; margin-bottom: 24px; justify-content: flex-end;">
+                <button id="btnExport" class="btn btn-secondary" title="Download your data as CSV">
+                    📥 Export as CSV
+                </button>
+            </div>
+
+            <div id="historyContent">
+                <div class="empty-state">
+                    <div class="empty-state__icon">📭</div>
+                    <p class="empty-state__text">No entries yet. Start by logging your first day!</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== SECTION: INSIGHTS ===== -->
+        <section class="section" id="sectionInsights">
+            <h2 class="section__title">Life Insights</h2>
+            <p class="section__desc">AI-powered analysis of your habits and patterns.</p>
+
+            <div class="insights-trigger">
+                <button class="btn-analyze" id="btnAnalyze">
+                    <span class="btn-text">🔍 Analyze My Life</span>
+                    <div class="spinner"></div>
+                </button>
+            </div>
+
+            <div id="insightsContent">
+                <div class="insights-message">
+                    Click the button above to generate your personalized insights.
+                </div>
+            </div>
+
+            <!-- Chart Container -->
+            <div id="chartContainer" class="glass-card" style="display: none; margin-top: 32px; padding: 24px;">
+                <h3 style="font-size: 1.1rem; margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+                    📈 Visual Trends
+                </h3>
+                <div style="height: 400px; position: relative;">
+                    <canvas id="habitsChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- ===== FOOTER ===== -->
+        <footer class="footer">
+            Life Dashboard &copy; 2026 — Built with FastAPI, pandas, and Claude AI
+        </footer>
+
+    </div>
+
+    <!-- ============================================
+         JAVASCRIPT — Application Logic
+         ============================================ -->
+    <!-- Chart.js CDN - async for performance (non-blocking) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" async defer></script>
+
+    <script>
+        // ===== AUTHENTICATION STATE =====
+        let currentUser = null;
+        let authToken = localStorage.getItem('authToken');
+
+        // ===== FLOATING PARTICLES =====
+        function createParticles() {
+            const particleCount = 5;
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + 'vw';
+                particle.style.animationDuration = (15 + Math.random() * 10) + 's';
+                particle.style.animationDelay = Math.random() * 15 + 's';
+                particle.style.width = '2px';
+                particle.style.height = '2px';
+                particle.style.opacity = '0.15';
+                document.body.appendChild(particle);
+            }
+        }
+        createParticles();
+
+        // ===== STATE =====
+        const API_BASE = '';  // Same origin
+        let habitsChart = null; // Global reference for the chart instance
+
+        const navTabs = document.querySelectorAll('.nav-tab');
+        const sections = document.querySelectorAll('.section');
+        const addDataForm = document.getElementById('addDataForm');
+        const moodSlider = document.getElementById('inputMood');
+        const moodDisplay = document.getElementById('moodDisplay');
+        const btnAnalyze = document.getElementById('btnAnalyze');
+        const toastContainer = document.getElementById('toastContainer');
+
+        // Auth elements
+        const authOverlay = document.getElementById('authOverlay');
+        const loginTab = document.getElementById('loginTab');
+        const registerTab = document.getElementById('registerTab');
+        const loginForm = document.getElementById('loginForm');
+        const registerForm = document.getElementById('registerForm');
+        const userDisplay = document.getElementById('userDisplay');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const userInfo = document.querySelector('.user-info');
+
+        // ===== AUTHENTICATION FUNCTIONS =====
+        function showAuthOverlay() {
+            authOverlay.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function hideAuthOverlay() {
+            authOverlay.style.display = 'none';
+            document.body.style.overflow = '';
+        }
+
+        function updateAuthUI() {
+            if (currentUser) {
+                userInfo.style.display = 'flex';
+                userDisplay.textContent = `👤 ${currentUser.username}`;
+                hideAuthOverlay();
+            } else {
+                userInfo.style.display = 'none';
+                showAuthOverlay();
+            }
+        }
+
+        function logout() {
+            currentUser = null;
+            authToken = null;
+            localStorage.removeItem('authToken');
+            updateAuthUI();
+            // Clear any displayed data
+            document.getElementById('historyContent').innerHTML = '';
+            document.getElementById('insightsContent').innerHTML = '';
+            document.getElementById('chartContainer').style.display = 'none';
+        }
+
+        // Check if user is already logged in on page load
+        async function checkAuth() {
+            if (authToken) {
+                try {
+                    // You might want to validate the token here
+                    // For now, we'll just assume it's valid if it exists
+                    // In production, you'd want to validate the token with the server
+                    updateAuthUI();
+                } catch (err) {
+                    logout();
+                }
+            } else {
+                showAuthOverlay();
+            }
+        }
+
+        // ===== AUTHENTICATION EVENT LISTENERS =====
+        loginTab.addEventListener('click', () => {
+            loginTab.classList.add('active');
+            registerTab.classList.remove('active');
+            loginForm.classList.add('active');
+            registerForm.classList.remove('active');
+            document.getElementById('loginError').textContent = '';
+        });
+
+        registerTab.addEventListener('click', () => {
+            registerTab.classList.add('active');
+            loginTab.classList.remove('active');
+            registerForm.classList.add('active');
+            loginForm.classList.remove('active');
+            document.getElementById('registerError').textContent = '';
+        });
+
+        logoutBtn.addEventListener('click', logout);
+
+        // ===== LOGIN FORM =====
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+
+            try {
+                const formData = new URLSearchParams();
+                formData.append('username', username);
+                formData.append('password', password);
+
+                const res = await fetch(`${API_BASE}/token`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: formData,
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    let errorMessage = 'Login failed';
+                    
+                    // Handle different error response formats
+                    if (err.detail) {
+                        if (typeof err.detail === 'string') {
+                            errorMessage = err.detail;
+                        } else if (Array.isArray(err.detail)) {
+                            // Handle Pydantic validation errors (array of error objects)
+                            errorMessage = err.detail.map(e => {
+                                if (typeof e === 'string') return e;
+                                // Pydantic v2 uses 'type' and 'loc' fields
+                                const field = e.loc?.[1] || e.loc?.[0] || 'field';
+                                const message = e.msg || e.message || e.type || 'Invalid';
+                                return `${field}: ${message}`;
+                            }).join('; ');
+                        }
+                    }
+                    throw new Error(errorMessage);
+                }
+
+                const data = await res.json();
+                authToken = data.access_token;
+                localStorage.setItem('authToken', authToken);
+
+                // Get user info (you might want to add an endpoint for this)
+                currentUser = { username: username };
+                updateAuthUI();
+                showToast('✅ Login successful!');
+
+            } catch (err) {
+                const errorMessage = err instanceof Error ? err.message : String(err);
+                document.getElementById('loginError').textContent = errorMessage;
+            }
+        });
+
+        // ===== REGISTER FORM =====
+        registerForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('registerUsername').value;
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+
+            try {
+                const res = await fetch(`${API_BASE}/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, email, password }),
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    let errorMessage = 'Registration failed';
+                    
+                    // Handle different error response formats
+                    if (err.detail) {
+                        if (typeof err.detail === 'string') {
+                            errorMessage = err.detail;
+                        } else if (Array.isArray(err.detail)) {
+                            // Handle Pydantic validation errors (array of error objects)
+                            errorMessage = err.detail.map(e => {
+                                if (typeof e === 'string') return e;
+                                // Pydantic v2 uses 'type' and 'loc' fields
+                                const field = e.loc?.[1] || e.loc?.[0] || 'field';
+                                const message = e.msg || e.message || e.type || 'Invalid';
+                                return `${field}: ${message}`;
+                            }).join('; ');
+                        }
+                    }
+                    throw new Error(errorMessage);
+                }
+
+                const user = await res.json();
+                // Clear form
+                document.getElementById('registerUsername').value = '';
+                document.getElementById('registerEmail').value = '';
+                document.getElementById('registerPassword').value = '';
+                showToast('✅ Registration successful! Please login.');
+                loginTab.click(); // Switch to login tab
+
+            } catch (err) {
+                const errorMessage = err instanceof Error ? err.message : String(err);
+                document.getElementById('registerError').textContent = errorMessage;
+            }
+        });
+
+        // ===== NAVIGATION =====
+        navTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                const target = tab.dataset.tab;
+
+                // Update classes
+                navTabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+
+                sections.forEach(s => s.classList.remove('active'));
+                document.getElementById(`section${capitalize(target)}`).classList.add('active');
+
+                // Auto-load data when switching to history (only if authenticated)
+                if (target === 'history' && authToken) loadHistory();
+            });
+        });
+
+        function capitalize(str) {
+            return str.charAt(0).toUpperCase() + str.slice(1);
+        }
+
+        // ===== MOOD SLIDER ===== (debounced for performance)
+        let sliderUpdateTimeout;
+        moodSlider.addEventListener('input', () => {
+            clearTimeout(sliderUpdateTimeout);
+            sliderUpdateTimeout = setTimeout(() => {
+                moodDisplay.textContent = moodSlider.value;
+            }, 40);  // Reduces DOM writes from 30/sec to ~2-3/sec
+        }, { passive: true });
+
+        // Set default date to today
+        document.getElementById('inputDate').valueAsDate = new Date();
+
+        // ===== TOAST NOTIFICATIONS =====
+        function showToast(message, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = message;
+            toastContainer.appendChild(toast);
+
+            // Remove after animation
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // ===== ADD DATA (POST /add-data) =====
+        addDataForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!authToken) {
+                showToast('❌ Please login first', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('btnSubmit');
+            btn.disabled = true;
+
+            const payload = {
+                study_hours: parseFloat(document.getElementById('inputStudy').value),
+                sleep_hours: parseFloat(document.getElementById('inputSleep').value),
+                screen_time: parseFloat(document.getElementById('inputScreen').value),
+                mood: parseInt(moodSlider.value),
+                date: document.getElementById('inputDate').value,
+            };
+
+            try {
+                const res = await fetch(`${API_BASE}/add-data`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(payload),
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || 'Failed to save entry');
+                }
+
+                showToast('✅ Entry saved successfully!');
+                addDataForm.reset();
+                moodSlider.value = 5;
+                moodDisplay.textContent = '5';
+                document.getElementById('inputDate').valueAsDate = new Date();
+
+            } catch (err) {
+                showToast(`❌ ${err.message}`, 'error');
+            } finally {
+                btn.disabled = false;
+            }
+        });
+
+        // ===== LOAD HISTORY (GET /get-data) ===== (DocumentFragment batching for performance)
+        // Chart instances (global references)
+        let barChart7Days = null;
+        let moodTrendChart = null;
+
+        async function loadHistory() {
+            if (!authToken) return;
+
+            const container = document.getElementById('historyContent');
+            const quickStatsContainer = document.getElementById('quickStatsContainer');
+            const miniChartsContainer = document.getElementById('miniChartsContainer');
+
+            try {
+                const res = await fetch(`${API_BASE}/get-data`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                const data = await res.json();
+
+                if (data.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-state__icon">📭</div>
+                            <p class="empty-state__text">No entries yet. Start by logging your first day!</p>
+                        </div>`;
+                    quickStatsContainer.style.display = 'none';
+                    miniChartsContainer.style.display = 'none';
+                    return;
+                }
+
+                // Show visualization containers
+                quickStatsContainer.style.display = 'block';
+                miniChartsContainer.style.display = 'block';
+
+                // Calculate and display quick stats
+                const avgStudy = (data.reduce((sum, d) => sum + d.study_hours, 0) / data.length).toFixed(1);
+                const avgSleep = (data.reduce((sum, d) => sum + d.sleep_hours, 0) / data.length).toFixed(1);
+                const avgScreen = (data.reduce((sum, d) => sum + d.screen_time, 0) / data.length).toFixed(1);
+                const avgMood = (data.reduce((sum, d) => sum + d.mood, 0) / data.length).toFixed(1);
+
+                document.getElementById('avgStudyValue').textContent = avgStudy + 'h';
+                document.getElementById('avgSleepValue').textContent = avgSleep + 'h';
+                document.getElementById('avgScreenValue').textContent = avgScreen + 'h';
+                document.getElementById('avgMoodValue').textContent = avgMood + '/10';
+
+                // Render mini charts (with slight delay to ensure DOM is ready)
+                setTimeout(() => {
+                    renderBar7DaysChart(data.slice(-7));  // Last 7 entries
+                    renderMoodTrendChart(data);  // All data
+                }, 50);
+
+                // Use DocumentFragment for batch DOM insertion (single reflow instead of per-row)
+                const fragment = document.createDocumentFragment();
+                const grid = document.createElement('div');
+                grid.className = 'data-grid';
+
+                // Create header row
+                const header = document.createElement('div');
+                header.className = 'data-row data-row__header';
+                header.innerHTML = '<span>Date</span><span>Study</span><span>Sleep</span><span>Screen</span><span>Mood</span>';
+                grid.appendChild(header);
+
+                // Batch append data rows
+                data.forEach(entry => {
+                    const moodClass = entry.mood >= 7 ? 'high' : entry.mood >= 4 ? 'mid' : 'low';
+                    const row = document.createElement('div');
+                    row.className = 'data-row';
+                    row.innerHTML = `
+                        <span class="date">${formatDate(entry.date)}</span>
+                        <span class="metric"><strong>${entry.study_hours}</strong>h study</span>
+                        <span class="metric"><strong>${entry.sleep_hours}</strong>h sleep</span>
+                        <span class="metric"><strong>${entry.screen_time}</strong>h screen</span>
+                        <span><div class="mood-badge ${moodClass}">${entry.mood}</div></span>`;
+                    grid.appendChild(row);
+                });
+
+                fragment.appendChild(grid);
+                container.innerHTML = '';  // Clear once
+                container.appendChild(fragment);  // Append once = single reflow
+
+            } catch (err) {
+                container.innerHTML = `<div class="empty-state"><p class="empty-state__text">⚠️ Failed to load data</p></div>`;
+                quickStatsContainer.style.display = 'none';
+                miniChartsContainer.style.display = 'none';
+            }
+        }
+
+        // ===== CHART RENDERING FUNCTIONS =====
+        function renderBar7DaysChart(data) {
+            const ctx = document.getElementById('barChart7Days');
+            if (!ctx) return;
+
+            // Destroy existing chart to prevent memory leaks
+            if (barChart7Days) barChart7Days.destroy();
+
+            const labels = data.map(d => formatDate(d.date).split(' ')[0]); // Mon, Tue, etc
+            const studyData = data.map(d => d.study_hours);
+            const sleepData = data.map(d => d.sleep_hours);
+            const screenData = data.map(d => d.screen_time);
+
+            barChart7Days = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Study',
+                            data: studyData,
+                            backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                            borderRadius: 4,
+                            borderSkipped: false
+                        },
+                        {
+                            label: 'Sleep',
+                            data: sleepData,
+                            backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                            borderRadius: 4,
+                            borderSkipped: false
+                        },
+                        {
+                            label: 'Screen',
+                            data: screenData,
+                            backgroundColor: 'rgba(244, 63, 94, 0.8)',
+                            borderRadius: 4,
+                            borderSkipped: false
+                        }
+                    ]
+                },
+                options: {
+                    animation: false,
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'bottom',
+                            labels: {
+                                color: '#5a5a72',
+                                font: { size: 11, weight: '500' },
+                                padding: 12,
+                                usePointStyle: true
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(10, 10, 15, 0.95)',
+                            titleFont: { size: 12, weight: '600' },
+                            bodyFont: { size: 11 },
+                            padding: 8,
+                            cornerRadius: 6,
+                            borderColor: 'rgba(255, 255, 255, 0.1)',
+                            borderWidth: 1
+                        }
+                    },
+                    scales: {
+                        x: {
+                            stacked: false,
+                            grid: { display: false },
+                            ticks: {
+                                color: '#5a5a72',
+                                font: { size: 10 }
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            max: 24,
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)',
+                                drawBorder: false
+                            },
+                            ticks: {
+                                color: '#5a5a72',
+                                font: { size: 10 }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderMoodTrendChart(data) {
+            const ctx = document.getElementById('moodTrendChart');
+            if (!ctx) return;
+
+            // Destroy existing chart
+            if (moodTrendChart) moodTrendChart.destroy();
+
+            const labels = data.map(d => formatDate(d.date).split(' ')[0]);
+            const moodData = data.map(d => d.mood);
+
+            moodTrendChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Mood',
+                            data: moodData,
+                            borderColor: '#8b5cf6',
+                            backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                            borderWidth: 2.5,
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 3,
+                            pointBackgroundColor: '#8b5cf6',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 1,
+                            pointHoverRadius: 4
+                        }
+                    ]
+                },
+                options: {
+                    animation: false,
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(10, 10, 15, 0.95)',
+                            titleFont: { size: 12, weight: '600' },
+                            bodyFont: { size: 11 },
+                            padding: 8,
+                            cornerRadius: 6,
+                            borderColor: 'rgba(255, 255, 255, 0.1)',
+                            borderWidth: 1
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: {
+                                color: '#5a5a72',
+                                font: { size: 10 }
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            max: 10,
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)',
+                                drawBorder: false
+                            },
+                            ticks: {
+                                color: '#5a5a72',
+                                font: { size: 10 }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function formatDate(dateStr) {
+            const date = new Date(dateStr + 'T00:00:00');
+            return date.toLocaleDateString('en-US', {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+            });
+        }
+
+        function buildCorrelationRow(label, value) {
+            const strength = Math.abs(value);
+            let strengthLabel = '';
+            let strengthColor = '';
+
+            if (strength > 0.7) {
+                strengthLabel = 'Strong';
+                strengthColor = '#10b981';
+            } else if (strength > 0.4) {
+                strengthLabel = 'Moderate';
+                strengthColor = '#f59e0b';
+            } else if (strength > 0.1) {
+                strengthLabel = 'Weak';
+                strengthColor = '#3b82f6';
+            } else {
+                strengthLabel = 'None';
+                strengthColor = '#5a5a72';
+            }
+
+            const direction = value >= 0 ? '↗️' : '↘️';
+            return `
+                <div class="correlation-row">
+                    <div class="correlation-label">${label}</div>
+                    <div class="correlation-value" style="color: ${strengthColor};">
+                        ${direction} ${strengthLabel} (${value.toFixed(2)})
+                    </div>
+                </div>`;
+        }
+
+        // ===== INSIGHTS (GET /insights) =====
+        btnAnalyze.addEventListener('click', async () => {
+            if (!authToken) {
+                showToast('❌ Please login first', 'error');
+                return;
+            }
+
+            btnAnalyze.classList.add('loading');
+            btnAnalyze.disabled = true;
+            const container = document.getElementById('insightsContent');
+            container.innerHTML = '<div class="insights-message">🔄 Analyzing your life data...</div>';
+
+            try {
+                const res = await fetch(`${API_BASE}/insights`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                const data = await res.json();
+
+                if (data.status === 'insufficient_data') {
+                    container.innerHTML = `
+                        <div class="insights-message">
+                            📊 ${data.message}
+                        </div>`;
+                    return;
+                }
+
+                // Build the insights UI
+                const stats = data.stats;
+                const insights = data.insights;
+
+                let html = '';
+
+                // --- Stats Grid ---
+                html += `<div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-card__icon">😴</div>
+                        <div class="stat-card__value">${stats.averages.avg_sleep_hours}</div>
+                        <div class="stat-card__label">Avg Sleep (hrs)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card__icon">📚</div>
+                        <div class="stat-card__value">${stats.averages.avg_study_hours}</div>
+                        <div class="stat-card__label">Avg Study (hrs)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card__icon">📱</div>
+                        <div class="stat-card__value">${stats.averages.avg_screen_time}</div>
+                        <div class="stat-card__label">Avg Screen (hrs)</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card__icon">🎭</div>
+                        <div class="stat-card__value">${stats.averages.avg_mood}</div>
+                        <div class="stat-card__label">Avg Mood</div>
+                    </div>
+                </div>`;
+
+                // --- Mood Trend ---
+                const trendEmoji = stats.mood_trend === 'improving' ? '📈' :
+                                   stats.mood_trend === 'declining' ? '📉' : '➡️';
+                html += `<div class="trend-banner ${stats.mood_trend}">
+                    ${trendEmoji} Mood Trend: <strong>${stats.mood_trend.toUpperCase()}</strong> over your last 7 entries
+                </div>`;
+
+                // --- Best / Worst Days ---
+                html += `<div class="day-cards">
+                    <div class="day-card best">
+                        <div class="day-card__emoji">🌟</div>
+                        <div class="day-card__label">Best Day</div>
+                        <div class="day-card__date">${formatDate(stats.best_day.date)}</div>
+                        <div class="day-card__mood">Mood: ${stats.best_day.mood}/10</div>
+                    </div>
+                    <div class="day-card worst">
+                        <div class="day-card__emoji">😔</div>
+                        <div class="day-card__label">Worst Day</div>
+                        <div class="day-card__date">${formatDate(stats.worst_day.date)}</div>
+                        <div class="day-card__mood">Mood: ${stats.worst_day.mood}/10</div>
+                    </div>
+                </div>`;
+
+                // --- Correlations ---
+                html += `<div class="correlations">
+                    <h3 style="font-size: 1rem; margin-bottom: 12px; color: var(--text-secondary);">📊 Correlations</h3>
+                    ${buildCorrelationRow('Sleep ↔ Mood', stats.correlations.sleep_vs_mood)}
+                    ${buildCorrelationRow('Sleep ↔ Study', stats.correlations.sleep_vs_study)}
+                    ${buildCorrelationRow('Screen Time ↔ Mood', stats.correlations.screen_time_vs_mood)}
+                </div>`;
+
+                // --- AI Insights ---
+                html += `<div class="insights-card">
+                    <div class="insights-card__header">
+                        <h3>🧠 AI Insights</h3>
+                        <span class="ai-badge">Groq AI</span>
+                    </div>`;
+
+                if (insights && insights.length > 0) {
+                    insights.forEach(insight => {
+                        html += `<div class="insight-item">${insight}</div>`;
+                    });
+                } else {
+                    html += `<div class="insight-item">No insights available. Try adding more data.</div>`;
+                }
+
+                html += '</div>';
+
+                container.innerHTML = html;
+
+                // --- Render Chart ---
+                if (data.history && data.history.length > 0) {
+                    document.getElementById('chartContainer').style.display = 'block';
+                    renderHabitsChart(data.history);
+                }
+
+            } catch (err) {
+                container.innerHTML = `
+                    <div class="insights-message">
+                        ⚠️ Failed to generate insights. Make sure the server is running.
+                    </div>`;
+            } finally {
+                btnAnalyze.classList.remove('loading');
+                btnAnalyze.disabled = false;
+            }
+        });
+
+        // ===== CHARTING LOGIC =====
+        function renderHabitsChart(history) {
+            const ctx = document.getElementById('habitsChart').getContext('2d');
+            
+            // Destroy existing chart if it exists to avoid memory leaks/overlay issues
+            if (habitsChart) {
+                habitsChart.destroy();
+            }
+
+            // Prepare data: filter and format
+            const labels = history.map(h => formatDate(h.date));
+            const studyData = history.map(h => h.study_hours);
+            const sleepData = history.map(h => h.sleep_hours);
+            const screenData = history.map(h => h.screen_time);
+            const moodData = history.map(h => h.mood);
+
+            // Chart Configuration
+            habitsChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Mood',
+                            data: moodData,
+                            borderColor: '#8b5cf6',
+                            backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                            borderWidth: 4,
+                            tension: 0.4,
+                            yAxisID: 'y1',
+                            pointRadius: 3,
+                            pointHoverRadius: 5,
+                            pointBorderWidth: 1,
+                            fill: true
+                        },
+                        {
+                            label: 'Sleep',
+                            data: sleepData,
+                            borderColor: '#3b82f6',
+                            borderWidth: 2,
+                            borderDash: [5, 5],
+                            tension: 0.4,
+                            yAxisID: 'y',
+                            pointRadius: 2,
+                            pointBorderWidth: 0.5
+                        },
+                        {
+                            label: 'Study',
+                            data: studyData,
+                            borderColor: '#10b981',
+                            borderWidth: 2,
+                            tension: 0.4,
+                            yAxisID: 'y',
+                            pointRadius: 2,
+                            pointBorderWidth: 0.5
+                        },
+                        {
+                            label: 'Screen',
+                            data: screenData,
+                            borderColor: '#f43f5e',
+                            borderWidth: 2,
+                            tension: 0.4,
+                            yAxisID: 'y',
+                            pointRadius: 2,
+                            pointBorderWidth: 0.5
+                        }
+                    ]
+                },
+                options: {
+                    animation: false,  // Disable chart animations (CPU-based, causes jank)
+                    interaction: { intersect: false, mode: 'index' },  // Reduce tooltip computation
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                color: '#9a9ab0',
+                                font: { family: 'Inter', size: 12 },
+                                padding: 20
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(10, 10, 15, 0.9)',
+                            titleFont: { family: 'Inter', size: 14 },
+                            bodyFont: { family: 'Inter', size: 13 },
+                            padding: 12,
+                            cornerRadius: 8,
+                            borderColor: 'rgba(255, 255, 255, 0.1)',
+                            borderWidth: 1
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            position: 'left',
+                            title: { display: true, text: 'Hours', color: '#5a5a72' },
+                            grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                            ticks: { color: '#5a5a72' }
+                        },
+                        y1: {
+                            beginAtZero: true,
+                            max: 10,
+                            position: 'right',
+                            title: { display: true, text: 'Mood Score', color: '#8b5cf6' },
+                            grid: { drawOnChartArea: false },
+                            ticks: { color: '#8b5cf6' }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#5a5a72' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ===== EXPORT DATA (GET /export) =====
+        const btnExport = document.getElementById('btnExport');
+        btnExport.addEventListener('click', async () => {
+            if (!authToken) {
+                showToast('❌ Please login first', 'error');
+                return;
+            }
+
+            btnExport.disabled = true;
+            btnExport.textContent = '⏳ Exporting...';
+
+            try {
+                const res = await fetch(`${API_BASE}/export`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || 'Failed to export data');
+                }
+
+                // Create a blob from the response and trigger download
+                const blob = await res.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `life_dashboard_${new Date().toISOString().split('T')[0]}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+
+                showToast('✅ Data exported successfully!');
+            } catch (err) {
+                showToast(`❌ ${err.message}`, 'error');
+            } finally {
+                btnExport.disabled = false;
+                btnExport.textContent = '📥 Export as CSV';
+            }
+        });
+
+    </script>
+</body>
+</html>        // ===== INITIALIZE =====
+        checkAuth();
+    </script>
+</body>
+</html>

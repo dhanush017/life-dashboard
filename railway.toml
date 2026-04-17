@@ -1,0 +1,16 @@
+# Railway.app deployment configuration
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "python start_production.py"
+
+[[services]]
+name = "database"
+image = "postgres:15-alpine"
+plan = "starter"
+
+[[volumes]]
+source = "/app/logs"
+destination = "logs"
+size = "1GB"

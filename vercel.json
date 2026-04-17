@@ -1,0 +1,39 @@
+{
+  "version": 2,
+  "env": {
+    "GROQ_API_KEY": "@groq_api_key",
+    "SECRET_KEY": "@secret_key",
+    "DATABASE_URL": "@database_url",
+    "ENVIRONMENT": "production"
+  },
+  "builds": [
+    {
+      "src": "main.py",
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "50mb",
+        "runtime": "python3.12"
+      }
+    },
+    {
+      "src": "index.html",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "main.py"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "index.html"
+    }
+  ],
+  "functions": {
+    "main.py": {
+      "maxDuration": 30,
+      "memory": 1024
+    }
+  }
+}

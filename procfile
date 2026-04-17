@@ -1,0 +1,18 @@
+name: Life Dashboard
+runtime: python-3.12
+
+build:
+  builder: pip
+  python-version: "3.12"
+
+run:
+  command: python start_production.py
+
+env:
+  PORT: 8000
+  WORKERS: 4
+
+services:
+  postgres:
+    plan: free
+    version: 15-alpine
