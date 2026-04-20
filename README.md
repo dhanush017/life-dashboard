@@ -331,6 +331,6 @@ This project is licensed under the MIT License - see [LICENSE](LICENSE) file for
 
 [Deploy Now on Render](https://render.com) • [View API Docs](http://localhost:8000/docs) • [Star on GitHub](https://github.com/dhanush017/life-dashboard)
 
-**Made with ❤️ by [Your Name]**
+**Made with ❤️ by [Dhanush](https://github.com/dhanush017)**
 
 </div>

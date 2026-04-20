@@ -2,7 +2,7 @@
 name = "life-dashboard"
 version = "1.0.0"
 description = "A habit tracking system that doesn't just store data — it explains it."
-authors = ["Your Name <you@example.com>"]
+authors = ["Dhanush <dhanush@example.com>"]
 python = "^3.10"
 
 [dependencies]
@@ -15,7 +15,8 @@ groq = "1.1.2"
 pydantic = {version = "2.9.0", extras = ["email"]}
 python-dotenv = "1.0.1"
 python-jose = {version = "3.3.0", extras = ["cryptography"]}
-passlib = {version = "1.7.4", extras = ["bcrypt"]}
+passlib = {version = "1.7.4", extras = ["bcrypt", "argon2"]}
+argon2-cffi = "23.1.0"
 python-multipart = "0.0.9"
 slowapi = "0.1.9"
 psycopg2-binary = "2.9.9"  # For PostgreSQL support in production
